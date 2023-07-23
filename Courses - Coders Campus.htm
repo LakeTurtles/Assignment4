@@ -1,0 +1,2117 @@
+<html>
+<head>
+<!-- Required meta tags always come first -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<meta http-equiv="x-ua-compatible" content="ie=edge" />
+<title>Courses - Coders Campus</title>
+
+<!--     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" /> -->
+<!--     <meta http-equiv="x-ua-compatible" content="ie=edge" /> -->
+<!--     <meta property="og:image" content="https://proffesso.com/img/proffesso-fb-logo.png" /> -->
+<!--     <meta property="og:url" content="https://proffesso.com" /> -->
+<!--     <meta property="og:image:type" content="image/png" /> -->
+<!--     <meta property="og:image:width" content="1200" /> -->
+<!--     <meta property="og:image:height" content="630" /> -->
+<!--     <meta property="og:description" -->
+<!--       content="Proffesso makes creating courses to sell online easy. With a free plan that include unlimited students, unlimited courses and zero transaction fees, Proffesso is the course management system to keep your eye on." /> -->
+<!--     <meta name="facebook-domain-verification" content="1nfrbfq8jteohwnqdriu2i5flrqoe4" /> -->
+    <link rel="icon" href="/img/favicon-32x32.png">
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+      integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
+      integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous" />
+    <link rel="stylesheet" href="/css/main.css" />
+    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/bootstrap-datetimepicker.min.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+      integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+    <script src="/js/global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.3/toastr.min.css" />
+    <link rel="stylesheet" type="text/css" href="//ajax.googleapis.com/ajax/libs/jqueryui/1/themes/flick/jquery-ui.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.3/toastr.min.js"></script>
+    <!-- Google Tag Manager -->
+	<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+	new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+	j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+	'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+	})(window,document,'script','dataLayer','GTM-5FT8VLC');</script>
+	<!-- End Google Tag Manager -->
+  
+<link rel="stylesheet" href="/css/studentCourse.css" />
+<script src="https://player.vimeo.com/api/player.js"></script>
+
+<script>
+/*<![CDATA[*/
+var currentQuestion = null;
+var currentLessonId = 4853;
+var quizInfo = null;
+var videoProvider = "";
+var secondsPlayed = 0;
+var totalDuration = 0;
+var timerInterval = null;
+
+$(function () {
+  if (quizInfo != null)
+  	populateQuestionPanel(quizInfo);
+  
+  var height = $("#lessonRow-"+currentLessonId).offset().top - 85;
+  $('.sidebarLessons').scrollTop(height);
+  
+  $("#ejectVideo").click(function (){
+    window.open(currentLessonId + "/video", "_blank", "height=480, width=640");
+  });
+  
+  $('#deviceLogin').click(function () {
+	  $.ajax({
+	    url: "/course-login-email",
+	    method: "post",
+	    data: {
+	      "lessonId" : currentLessonId
+	    },
+	    type: "json",
+	    success : function () {
+	      alert("Email sent successfully. Check your inbox and spam folder for the special login link.");
+	    },
+	    error : function () {
+	      alert("Whoops, we couldn't send you an email. Refresh the page and try again.")
+	    }
+	  });
+	 
+  });
+  // when the previous question button is clicked
+  $("body").on("click", "#prevQuestion", function () {
+    submitAnswer("prevQuestion");
+  });
+  
+  //when the next question button is clicked
+  $("body").on("click", "#nextQuestion", function () {
+    submitAnswer("nextQuestion");
+  });
+  
+  $("body").on("click", "#finishQuestion", function () {
+    submitAnswer("finishQuestion");
+  });
+  
+  $("body").on("click", "#retakeTest", function () {
+    var areYouSure = confirm("Are you sure you wish to retake this test?");
+    if (areYouSure == true)
+    {
+      window.location.href=currentLessonId+"/retakeTest";
+    }
+  });
+  
+  $(".lessonTextArea").children("img").each(function () {
+    classList = $(this).attr("class") == undefined ? "" : $(this).attr("class") + " ";
+    classList += "img-responsive";
+    $(this).attr("class", classList);
+  });
+  
+  if (videoProvider == 'Vimeo')
+  {
+    var iframe = document.querySelector('iframe');
+    var player = new Vimeo.Player(iframe);
+    
+    player.on('play', function (data) {
+      if (timerInterval == null) {
+	      timerInterval = setInterval(() => {
+                                    secondsPlayed++;
+                                  }, 1000);
+      }
+    });
+    
+    player.on('pause', function (data) {
+      stopTimer();
+      commitTimeWatched(secondsPlayed, data.duration);
+    });
+    
+    $("#nextLesson").click(function () {
+      stopTimer();
+      commitTimeWatched(secondsPlayed, totalDuration);
+    });
+    
+    $("#prevLesson").click(function () {
+      stopTimer();
+      commitTimeWatched(secondsPlayed, totalDuration);
+    });
+  }
+});
+
+function stopTimer () {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function commitTimeWatched (secondsWatched, duration) {
+  if (secondsWatched > duration)
+    secondsWatched = duration;
+  
+  $.ajax({
+    url: currentLessonId + "/updateTimeWatched",
+    method: "post",
+    data: {
+      "secondsWatched" : secondsWatched,
+      "totalVideoLength" : duration
+    },
+    type: "json",
+    success : function () {
+      secondsPlayed = 0;
+    },
+    error : function () {
+      console.log("error logging time watched");
+    }
+  });
+}
+
+function submitAnswer (action) {
+  if ($("#" + action).hasClass("disabled"))
+    return;
+  
+  if (!validateAnswer()) return;
+  
+  $("#prevQuestion, #nextQuestion, #finishQuestion").addClass("disabled");
+  
+  $.ajax({
+    url : currentLessonId + "/" + action,
+    type : "json",
+    method : "post",
+    data : {"action" : action, 
+            "currentQuestionId": currentQuestion.id, 
+            "selectedAnswer" : parseInt($("input[type='radio']:checked").val())},
+    success : function (quizInfo) {
+      if (quizInfo.showResults == true)
+      {
+        location.reload();
+      }
+      else
+      {
+        currentQuestion = quizInfo.question;
+        populateQuestionPanel(quizInfo);
+      }
+    },
+    error : function () {
+      console.log("error getting next question.");
+    }
+  });
+}
+
+function validateAnswer() {
+  var questionId = currentQuestion.id;
+  
+  if (!$("input[type='radio']:checked").val())
+  {
+    alert("You must select an answer to continue");
+    return false;
+  }
+  return true;
+}
+function populateQuestionPanel (quizInfo)
+{
+  var question = quizInfo.question;
+  
+  var questionPanelHtml = "" +
+  		"<div class='panel panel-primary'>" +
+  		"  <div class='panel-heading'>" +
+  		     question.questionText +
+  		"  </div>" +
+  		"  <div class='panel-body'>";
+      for (var i=0; i<question.answers.length; i++)
+	  {
+        var isChecked = quizInfo.selectedAnswerId != null;
+        isChecked = isChecked && question.answers[i].id == quizInfo.selectedAnswerId;
+        isChecked = isChecked ? "checked" : "";
+	    questionPanelHtml += "<div><input type='radio' name='questionGroup"+question.id+"' id='answer" + question.answers[i].id + "' value='"+question.answers[i].id+"' "+isChecked+" />" +
+	   		"<label for='answer"+question.answers[i].id+"'>"+question.answers[i].answerText+"</label></div>";
+	  }
+  		questionPanelHtml += "" +
+  		  "</div>" +
+  		"</div>" +
+  		"<div class='row'>"+
+  		"  <div class='col-xs-12 col-sm-6'>"+
+  		"    <button class='btn btn-default btn-block " + (quizInfo.firstQuestion == true ? "disabled" : "") + "' style='margin-bottom: 2em;' id='prevQuestion'>Previous</button>"+
+  		"  </div>"+
+  		"  <div class='col-xs-12 col-sm-6'>"+
+  		"    <button class='btn btn-primary btn-block' id='"+(quizInfo.lastQuestion == true ? "finish" : "next")+"Question'>" + (quizInfo.lastQuestion == true ? "Finish" : "Next") + "</button>"+
+  		"  </div>"+
+  		"</div>";
+  		
+  		
+  $("#questionPanel").html(questionPanelHtml);
+}
+
+/*]]>*/
+</script>
+<link rel="stylesheet" href="/css/main.css" /> 
+
+<style>
+  body {
+    overflow-x: hidden
+  }
+</style>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top navbar-inverse">
+  <div class="navbar-header col-sm-3">
+    <a class="navbar-brand" href="/students/courses"><img style="margin-top: -10px; width: 9em;" src="/img/coders-campus-logo-dark-small.png"/></a>
+  </div>
+  <div id="navbar" class="col-sm-9">
+    <script type="text/javascript">
+      $(function () {
+        $("#prevLesson").click(function () {
+          window.location.href=window.location.href+'/prev'
+        });
+        
+		$("#nextLesson").click(function () {
+		  window.location.href=window.location.href+'/next'
+        });
+      });
+    </script>
+    <div class="col-xs-12 col-sm-6 navButtonGroup">
+      <button id="prevLesson" class="btn btn-block btn-default navButton">Previous Lesson</button>
+    </div>
+    <div class="col-xs-12 col-sm-6 navButtonGroup">
+      <button id="nextLesson" class="btn btn-block btn-primary navButton">Complete &amp; Next Lesson</button>
+    </div>
+  </div>
+  
+  
+  <script type="text/javascript">
+    // Google Analytics Tracking
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-83912878-1', 'auto');
+    ga('send', 'pageview');
+	// END Google Analytics Tracking
+  </script>
+</nav>
+  
+    <div class="row">
+      <div class="hidden-xs col-sm-3 sidebarLessons"> 
+        <div >
+          <div>
+            <div class="studentSection">Introduction and Getting Started</div>
+            <div class="studentLesson" 
+             id="lessonRow-4748">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/671/lessons/4748">Getting Started</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5485">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/671/lessons/5485">Welcome to the Bootcamp</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5483">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/671/lessons/5483">Things to watch out for...</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5484">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/671/lessons/5484">Your Ideal Computer Setup</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div> 
+        <div >
+          <div>
+            <div class="studentSection">Unit 0 - HTML/CSS</div>
+            <div class="studentLesson" 
+             id="lessonRow-4749">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4749">Downloading and Using GitHub Desktop</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4750">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4750">Lesson 1 - What is HTML</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4751">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4751">Lesson 2 - Basic Structure of an HTML Page</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4752">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4752">Lesson 3 - Comments in HTML</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4753">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4753">Lesson 4 - More HTML Tags</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4754">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4754">Lesson 5 - Input Tags</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4755">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4755">Lesson 6 - Div Tags</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4756">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4756">Lesson 7 - Styles</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4757">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4757">Lesson 8 - Inline Block and Inline-Block Styles</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4758">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4758">Lesson 9 - CSS</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4759">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4759">Lesson 10:  External CSS Files</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4760">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4760">Lesson 11 - CSS Important Modifier</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4761">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4761">Lesson 12 - CSS Classes</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4762">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4762">Lesson 13: ID Selector with CSS</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4763">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4763">Lesson 14 - Filtering with Selectors</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4764">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4764">Lesson 15 - Span tag</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4765">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4765">Lesson 16: Aligning Elements</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4766">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4766">Lesson 17: CSS Shorthand</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4767">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4767">Lesson 18 - Doctype</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4768">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4768">Lesson 19 - Form Tag</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4769">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4769">Lesson 20 - Anchor Tag</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4770">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4770">Lesson 21 - Radio Input Element</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4771">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4771">Lesson 22 - Img Tag</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4772">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4772">Lesson 23 - Assignment Example</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4774">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/672/lessons/4774">Assignment #1</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            
+          </div>
+          
+        </div> 
+        <div >
+          <div>
+            <div class="studentSection">Unit 1 - JDK and Git</div>
+            
+            <div class="studentLesson" 
+             id="lessonRow-4776">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/4776">Installing Eclipse</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4777">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/4777">Important Note on Git</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            
+            
+            
+            
+            
+            
+            
+            
+            <div class="studentLesson" 
+             id="lessonRow-5486">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/5486">01- What is Git</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5487">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/5487">02 - Create GitHub Account</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5488">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/5488">03 - Install GitHub Desktop</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5489">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/5489">04 - Git Workflow</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5490">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/5490">05 - Creating and Publishing a Repo</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5491">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/5491">06 - Cloning a Remote Repository</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5492">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/5492">07 - Git Add Commit and Push</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5493">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/673/lessons/5493">08 - Git Branches</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div> 
+        <div >
+          <div>
+            <div class="studentSection">Unit 2 - Java Basics</div>
+            <div class="studentLesson" 
+             id="lessonRow-4786">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4786">01 - Introduction to Variables and Data Types</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4787">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4787">02 - int Data Type</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4788">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4788">03 - int vs Integer</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4789">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4789">04 - long Data Type</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4790">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4790">05 - floats and doubles</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4791">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4791">06 - booleans</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4792">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4792">07 - char and String</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4793">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4793">08 - Setting up a Runnable Java Application</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4794">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4794">09 - IF statement</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4795">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4795">10 - ELSE IF statement</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4796">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4796">11 - equals() vs ==</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4797">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4797">12 - Reading User Input</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4798">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4798">[Exercise] Reading User Input</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4799">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/674/lessons/4799">13 - AND and OR operators</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div> 
+        <div >
+          <div>
+            <div class="studentSection">Unit 3 - 4 Java Basics (Continued)</div>
+            <div class="studentLesson" 
+             id="lessonRow-4800">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4800">01 - Objects</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4801">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4801">02 - Quick Git Talk</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4802">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4802">03 - Object Dot Properties</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4803">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4803">04 - Methods</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4804">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4804">05 - Method Inputs</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5412">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/5412">STOP - Read This Before Continuing...</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4805">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4805">[Exercise] Creating a Method</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4806">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4806">06 - For Loops</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4807">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4807">07 - While Loops</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4808">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4808">[Exercise] Loop Until Valid Input is Received</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4809">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4809">08 - Increment Shortcuts</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4810">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4810">09 - Random Number Generation</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4811">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4811"> 10 - Constructors</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4812">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4812">Assignment GitHub Prep</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4813">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4813">Cloning the Java Bootcamp GitHub Repository</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4814">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4814">Problem Solving Explanation Part 1</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4815">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4815">Problem Solving Explanation Part 2</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4816">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4816">Problem Solving Explanation Part 3</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4817">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/675/lessons/4817">Assignment #2</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            
+          </div>
+          
+        </div> 
+        <div >
+          <div>
+            <div class="studentSection">Unit 5 - Core Java and File IO</div>
+            <div class="studentLesson" 
+             id="lessonRow-4819">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4819">01 - Static Keyword</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4820">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4820"> 02 - Access Modifiers</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4821">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4821"> 03 - Getters and Setters</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4822">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4822"> 04 - POJOs</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4823">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4823">[Exercise] Create User POJO</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4824">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4824"> 05 - Services</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4825">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4825"> 06 - Arrays Part I</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4826">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4826"> 07 - Arrays Part II</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4827">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4827">[Exercise] Create a UserService</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4828">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4828"> 08 - String Manipulation</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4829">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4829">[Exercise] Parse a String</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4830">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4830"> 09 - Exceptions Overview</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4831">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4831"> 10 - File IO Part I</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4832">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4832"> 11 - File IO Part II</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4833">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/676/lessons/4833">Assignment #3</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            
+          </div>
+          
+        </div> 
+        <div >
+          <div>
+            <div class="studentSection">Unit 6 - Important Object Concepts</div>
+            <div class="studentLesson" 
+             id="lessonRow-4835">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/4835">01 - Inheritance</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4836">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/4836">02 - Constructors and Sub-classes</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4837">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/4837">03 - Overriding</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4838">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/4838">04 - Overloading</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5040">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/5040">[Exercise] Practicing Inheritance</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4839">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/4839">05 - Casting</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4840">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/4840">06 - Protected and Package Access Modifiers</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4841">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/4841">07 - Object Wrapper Classes </a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4842">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/677/lessons/4842">08 - Writing to Files</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div> 
+        <div >
+          <div>
+            <div class="studentSection">Unit 7 - 8 Important Object Concepts (Continued)</div>
+            <div class="studentLesson" 
+             id="lessonRow-4843">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4843">01 - Interfaces</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4844">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4844">02 - Intro to Abstract Classes</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4845">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4845">03 - Extending an Abstract Class</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4846">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4846">04 - Using an Abstract Class</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5043">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/5043">[Exercise] Abstract Classes vs Concrete Classes</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4847">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4847">05 - Sorting with Comparable</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4848">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4848">06 - Sorting with Comparator</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5046">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/5046">[Exercise] Sorting practice</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4849">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4849">07 - RegEx Part I </a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4850">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4850">08 - RegEx Part II </a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4851">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-ok"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4851">09 - Serializable and Try with Resources</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson currentLesson" 
+             id="lessonRow-4853">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/678/lessons/4853">Assignment #4</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            
+          </div>
+          
+        </div> 
+        <div >
+          <div>
+            <div class="studentSection">Unit 9 - Collections and Java 8</div>
+            <div class="studentLesson" 
+             id="lessonRow-4854">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4854">01 - Arrays vs Lists</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4855">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4855">02 - ArrayList</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5056">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/5056">[Exercise] ArrayList Practice</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4856">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4856">03 - LinkedList</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4857">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4857">04 - Sets</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5060">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/5060">[Exercise] Set Practice</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4858">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4858">05 - Maps</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4859">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4859"> 06 - Hashing Algorithm</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4860">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4860">07 - HashCode and Equals</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5064">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/5064">[Exercise] Map Practice</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4861">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4861">08 - Lambdas</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4862">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4862">09 - Intro to Streams</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4863">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4863">10 - Stream Map</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4864">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4864">11 - Stream Joining</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4865">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4865">12 - Stream FlatMaps</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4866">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4866">13 - Grouping Data with Streams</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-5049">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/5049">[Exercise] Streams Practice</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4867">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4867">14 - Streams Recap</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            <div class="studentLesson" 
+             id="lessonRow-4868">
+              <div class="row">
+                <div class="col-xs-2">
+                  <i class="glyphicon glyphicon-unchecked"></i>
+                </div>
+                <div class="col-xs-10">
+                  <a href="/students/courses/274/sections/679/lessons/4868">Assignment #5</a>
+                  
+                  
+                </div>
+              </div>
+            </div>
+            
+          </div>
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          
+        </div> 
+        <div >
+          
+          <div style="margin-top: 2em;">
+                <div class="studentSection">Next Section Locked</div>
+            <div class="row">
+              <div class="col-xs-1"></div>
+              <div class="col-xs-11">
+                <span>At least 75% of the previous section's lessons must be marked as complete</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="container">
+              <div class="visible-xs hidden-lg" style="margin-top: 10rem"></div>
+        <div class="col-xs-12 col-sm-9 lessonSection">
+          <div class="row">
+            <div class="col-xs-12">
+              <h2>Assignment #4</h2>
+            </div>
+          </div>
+          
+          <div>
+            <div class="pull-right" style="margin: 0em 7em 1em 0em;">
+              
+            </div>
+            <div>
+              <p class="lessonTextArea"><h1>Requirements</h1><br><h3>Situation</h3><p>You work for a College as their Data Scientist and your job is to help the Professors manage the data that they receive from the College. For this assignment you need to help the Professors of 3 different classes with their student enrollment list.&nbsp;</p><p>The Professors were given a single CSV file that contains a "master list" of all students across all courses. But each Professor only wants to see a list of their own students (not the students who are in other classes).</p><br><h3>Job</h3><p>You will need to parse the <a href="https://java-bootcamp-files.s3.amazonaws.com/student-master-list.csv" target="_blank"><strong><u>Master List File</u></strong></a>&nbsp;and separate the data into 3 separate CSV files. Each CSV file should contain a list of students specific to that particular course (i.e. we're grouping the students by course).&nbsp;</p><p>For each of the 3 CSV files, you'll need to <u>sort the students by grade in descending order</u>.</p><p>The CSV output file names should be called: <font color="#953734">course1.csv</font>, <font color="#953734">course2.csv</font>, and <font color="#953734">course3.csv.</font></p><h3><br>Hints</h3><p><ol><li>In order to sort an array, you'll need to figure out how to handle null entries in your array. If you're trying to use <font color="#953734">Arrays.sort(yourArray)</font>, and <font color="#953734">yourArray</font> contains null values, the sort will crash.&nbsp;</li><li>When writing to a file, you can use <font color="#953734">"\n"</font> to write a new line to the file. Fore example: <font color="#953734">fileWriter.write("This is one line \n");</font></li><li>If you want to turn String input into an Integer, you can parse it like so: <font color="#953734">Integer myIntVal = Integer.parseInt(myStringVal);</font></li></ol></p><p><h3><br>Example Output<br><br></h3><p><strong>course1.csv</strong></p></p><blockquote>Student ID,Student Name,Course,Grade<br>28,Justin Conrad,COMPSCI 310,99<br>37,Simone Scott,COMPSCI 312,91<br>91,Donald Schultz,COMPSCI 321,87<br>19,Blair Heaton,COMPSCI 309,87<br>79,Kerys John,COMPSCI 319,87<br>64,Jameson Best,COMPSCI 316,86<br>... rest of lines omitted ...</blockquote><br><p><strong>course2.csv</strong></p><blockquote>Student ID,Student Name,Course,Grade<br>89,Alison Murray,APMTH 134,93<br>59,Amber-Rose Austin,APMTH 129,93<br>68,Aran Rice,APMTH 131,89<br>44,Brandan Mcbride,APMTH 127,89<br>32,Veronica Dodd,APMTH 125,88<br>... rest of lines omitted ...</blockquote><br><p><strong>course3.csv</strong></p><blockquote>Student ID,Student Name,Course,Grade<br>15,Padraig Barry,STAT 236,93<br>39,Zachariah Hutchinson,STAT 240,92<br>33,Stewart Reed,STAT 239,90<br>54,Franciszek Hartman,STAT 242,90<br>6,Bodhi Stokes,STAT 234,86<br>... rest of lines omitted ...</blockquote></p>
+            </div>
+          </div>
+          
+          
+        </div>
+      </div>
+      
+      <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+    <div id="footerText" style="margin: 5em auto 2em auto; width: 100%; text-align: center; font-size: 0.8em;">
+      &copy; Coders Campus <span>2023</span>
+      <br/>Version: 2.0.0.0
+      <br/><a href="/privacypolicy.html" target="_blank">Privacy Policy</a> | <a href="/termsofservice.html" target="_blank">Terms of Service</a>
+      <!--Start of Tawk.to Script-->
+      
+      <!--End of Tawk.to Script-->
+    </div>
+</body>
+</html>
